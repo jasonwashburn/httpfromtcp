@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -16,9 +17,10 @@ func main() {
 
 	bytes := make([]byte, 8)
 	eof := false
+	currentLine := ""
 
 	for {
-		_, err := file.Read(bytes)
+		bytesRead, err := file.Read(bytes)
 		if errors.Is(err, io.EOF) {
 			eof = true
 		} else if err != nil {
@@ -26,9 +28,19 @@ func main() {
 			os.Exit(1)
 		}
 
-		fmt.Printf("read: %s\n", bytes)
+		parts := strings.Split(string(bytes[:bytesRead]), "\n")
+		currentLine += parts[0]
+		if len(parts) > 1 { // we hit a newline
+			fmt.Printf("read: %s\n", currentLine)
+			currentLine = parts[1] // set currentLine to remaining part
+		}
+
 		if eof {
+			if len(currentLine) != 0 {
+				fmt.Printf("read: %s\n", currentLine) // output anything that's left
+			}
 			break
 		}
+		bytes = make([]byte, 8) // reset bytes for the next read
 	}
 }
