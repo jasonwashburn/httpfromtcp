@@ -15,32 +15,30 @@ func main() {
 		os.Exit(1)
 	}
 
-	bytes := make([]byte, 8)
-	eof := false
-	currentLine := ""
+	currentLineContents := ""
 
 	for {
-		bytesRead, err := file.Read(bytes)
-		if errors.Is(err, io.EOF) {
-			eof = true
-		} else if err != nil {
-			fmt.Println("Error reading file:", err)
-			os.Exit(1)
-		}
-
-		parts := strings.Split(string(bytes[:bytesRead]), "\n")
-		currentLine += parts[0]
-		if len(parts) > 1 { // we hit a newline
-			fmt.Printf("read: %s\n", currentLine)
-			currentLine = parts[1] // set currentLine to remaining part
-		}
-
-		if eof {
-			if len(currentLine) != 0 {
-				fmt.Printf("read: %s\n", currentLine) // output anything that's left
+		buffer := make([]byte, 8)
+		n, err := file.Read(buffer)
+		if err != nil {
+			if currentLineContents != "" {
+				fmt.Printf("read: %s\n", currentLineContents)
+				currentLineContents = ""
 			}
+
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			fmt.Println("Error reading file:", err)
 			break
 		}
-		bytes = make([]byte, 8) // reset bytes for the next read
+
+		str := string(buffer[:n])
+		parts := strings.Split(str, "\n")
+		for _, part := range parts[:len(parts)-1] {
+			fmt.Printf("read: %s%s\n", currentLineContents, part)
+			currentLineContents = ""
+		}
+		currentLineContents += parts[len(parts)-1]
 	}
 }
