@@ -28,14 +28,14 @@ const (
 const bufferSize = 8
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	buf := make([]byte, bufferSize, bufferSize)
+	buf := make([]byte, bufferSize)
 	readToIndex := 0
 
 	r := Request{ParserState: ParserInitialized}
 
 	for r.ParserState != ParserDone {
 		if len(buf) == cap(buf) {
-			newBuff := make([]byte, 2*len(buf), 2*len(buf))
+			newBuff := make([]byte, 2*len(buf))
 			_ = copy(newBuff, buf)
 			buf = newBuff
 		}
@@ -49,7 +49,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error parsing request: %w", err)
 		}
-		newBuff := make([]byte, len(buf[numParsed:]), len(buf[numParsed:]))
+		newBuff := make([]byte, len(buf[numParsed:]))
 		copy(newBuff, buf[numParsed:])
 		buf = newBuff
 		readToIndex -= numParsed
