@@ -1,6 +1,7 @@
 package request
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 type Request struct {
 	RequestLine RequestLine
+	ParserState ParserState
 }
 
 type RequestLine struct {
@@ -23,15 +25,36 @@ const (
 	ParserDone
 )
 
-func RequestFromReader(reader io.Reader) (*Request, error) {
-	r, err := io.ReadAll(reader)
-	if err != nil {
-		fmt.Println("Error reading from reader:", err)
-	}
+const bufferSize = 8
 
-	lines := strings.Split(string(r), "\r\n")
-	_, requestLine, err := parseRequestLine(lines[0])
-	return &Request{RequestLine: *requestLine}, err
+func RequestFromReader(reader io.Reader) (*Request, error) {
+	buf := make([]byte, bufferSize, bufferSize)
+	readToIndex := 0
+
+	r := Request{ParserState: ParserInitialized}
+
+	for r.ParserState != ParserDone {
+		if len(buf) == cap(buf) {
+			newBuff := make([]byte, 2*len(buf), 2*len(buf))
+			_ = copy(newBuff, buf)
+			buf = newBuff
+		}
+
+		bytesRead, err := reader.Read(buf[readToIndex:])
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		readToIndex += bytesRead
+		numParsed, err := r.parse(buf[:readToIndex])
+		if err != nil {
+			return nil, fmt.Errorf("error parsing request: %w", err)
+		}
+		newBuff := make([]byte, len(buf[numParsed:]), len(buf[numParsed:]))
+		copy(newBuff, buf[numParsed:])
+		buf = newBuff
+		readToIndex -= numParsed
+	}
+	return &r, nil
 }
 
 func parseRequestLine(line string) (int, *RequestLine, error) {
@@ -39,6 +62,9 @@ func parseRequestLine(line string) (int, *RequestLine, error) {
 		// needs more data before we can parse the request line
 		return 0, &RequestLine{}, nil
 	}
+
+	line = strings.Split(line, "\r\n")[0]
+	fmt.Printf("Parsing request line: %s\n", line)
 
 	parts := strings.Split(line, " ")
 	if len(parts) != 3 {
@@ -57,9 +83,33 @@ func parseRequestLine(line string) (int, *RequestLine, error) {
 
 	bytesRead := len(line) + 2 // +2 for the \r\n at the end
 
-	return bytesRead, &RequestLine{
+	fmt.Printf("Parsed request line: method=%#v, target=%#v, version=%#v\n", method, parts[1], httpVersion)
+
+	rl := RequestLine{
 		HttpVersion:   httpVersion,
 		RequestTarget: parts[1],
 		Method:        method,
-	}, nil
+	}
+	fmt.Printf("Returning request line: %#v\n", rl)
+	return bytesRead, &rl, nil
+}
+
+func (r *Request) parse(data []byte) (int, error) {
+	switch r.ParserState {
+	case ParserInitialized:
+		n, rl, err := parseRequestLine(string(data))
+		if err != nil {
+			return -1, err
+		}
+		if n == 0 {
+			return 0, nil // need more data
+		}
+		r.RequestLine = *rl
+		r.ParserState = ParserDone
+		return n, nil
+	case ParserDone:
+		return -1, errors.New("trying to read data in a done state")
+	default:
+		return -1, errors.New("unknown state")
+	}
 }
