@@ -70,8 +70,7 @@ func TestParse(t *testing.T) {
 	headers = NewHeaders()
 	data = []byte("HostWithoutColon\r\n")
 	n, done, err = headers.Parse(data)
-	require.Error(t, err)
-	assert.Equal(t, "invalid header: missing colon", err.Error())
+	require.Error(t, err, "invalid header: missing colon")
 	assert.Equal(t, 0, n)
 	assert.False(t, done)
 
@@ -79,8 +78,7 @@ func TestParse(t *testing.T) {
 	headers = NewHeaders()
 	data = []byte(": value\r\n")
 	n, done, err = headers.Parse(data)
-	require.Error(t, err)
-	assert.Equal(t, "invalid header: empty key", err.Error())
+	require.Error(t, err, "invalid header: empty key")
 	assert.Equal(t, 0, n)
 	assert.False(t, done)
 
@@ -88,8 +86,15 @@ func TestParse(t *testing.T) {
 	headers = NewHeaders()
 	data = []byte("   : value\r\n")
 	n, done, err = headers.Parse(data)
-	require.Error(t, err)
-	assert.Equal(t, "invalid header: empty key", err.Error())
+	require.Error(t, err, "invalid header: empty key")
+	assert.Equal(t, 0, n)
+	assert.False(t, done)
+
+	// Test: Invalid char in key
+	headers = NewHeaders()
+	data = []byte("H©st: localhost:42069\r\n\r\n")
+	n, done, err = headers.Parse(data)
+	require.Error(t, err, "invalid header: invalid characters in field name")
 	assert.Equal(t, 0, n)
 	assert.False(t, done)
 }

@@ -1,3 +1,4 @@
+// Package headers provides functionality to parse and store HTTP-like headers.
 package headers
 
 import (
@@ -43,10 +44,30 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return 0, false, errors.New("invalid header: space before colon")
 	}
 
+	if !isValidFieldName(key) {
+		return 0, false, errors.New("invalid header: invalid characters in field name")
+	}
+
 	key = strings.ToLower(key)
 
 	h[key] = value
 	return bytesConsumed, false, nil
+}
+
+func isValidFieldName(s string) bool {
+	for _, r := range s {
+		valid := (r >= 'A' && r <= 'Z') ||
+			(r >= 'a' && r <= 'z') ||
+			(r >= '0' && r <= '9') ||
+			r == '!' || r == '#' || r == '$' || r == '%' || r == '&' ||
+			r == '\'' || r == '*' || r == '+' || r == '-' || r == '.' ||
+			r == '^' || r == '_' || r == '`' || r == '|' || r == '~'
+
+		if !valid {
+			return false
+		}
+	}
+	return true
 }
 
 func NewHeaders() Headers {
