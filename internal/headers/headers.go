@@ -3,6 +3,7 @@ package headers
 import (
 	"bytes"
 	"errors"
+	"strings"
 )
 
 type Headers map[string]string
@@ -41,6 +42,8 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	if colonIdx > 0 && headerLine[colonIdx-1] == ' ' {
 		return 0, false, errors.New("invalid header: space before colon")
 	}
+
+	key = strings.ToLower(key)
 
 	h[key] = value
 	return bytesConsumed, false, nil
