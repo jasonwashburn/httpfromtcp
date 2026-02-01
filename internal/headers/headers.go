@@ -50,8 +50,17 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 	key = strings.ToLower(key)
 
-	h[key] = value
+	h.Add(key, value)
 	return bytesConsumed, false, nil
+}
+
+func (h Headers) Add(k string, v string) {
+	_, exists := h[k]
+	if exists {
+		h[k] = h[k] + ", " + v
+	} else {
+		h[k] = v
+	}
 }
 
 func isValidFieldName(s string) bool {

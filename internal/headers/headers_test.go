@@ -58,6 +58,17 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, 23, n)
 	assert.False(t, done)
 
+	// Test: Valid single header with existing matching field name
+	headers = NewHeaders()
+	headers["accept"] = "text/html"
+	data = []byte("Accept: application/json\r\n\r\n")
+	n, done, err = headers.Parse(data)
+	require.NoError(t, err)
+	require.NotNil(t, headers)
+	assert.Equal(t, "text/html, application/json", headers["accept"])
+	assert.Equal(t, 26, n)
+	assert.False(t, done)
+
 	// Test: Invalid spacing header
 	headers = NewHeaders()
 	data = []byte("       Host : localhost:42069       \r\n\r\n")
