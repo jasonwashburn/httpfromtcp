@@ -55,4 +55,31 @@ func TestParse(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, 0, n)
 	assert.False(t, done)
+
+	// Test: Invalid Missing colon
+	headers = NewHeaders()
+	data = []byte("HostWithoutColon\r\n")
+	n, done, err = headers.Parse(data)
+	require.Error(t, err)
+	assert.Equal(t, "invalid header: missing colon", err.Error())
+	assert.Equal(t, 0, n)
+	assert.False(t, done)
+
+	// Test: Invalid Empty key (colon at start)
+	headers = NewHeaders()
+	data = []byte(": value\r\n")
+	n, done, err = headers.Parse(data)
+	require.Error(t, err)
+	assert.Equal(t, "invalid header: empty key", err.Error())
+	assert.Equal(t, 0, n)
+	assert.False(t, done)
+
+	// Test: Only whitespace before colon
+	headers = NewHeaders()
+	data = []byte("   : value\r\n")
+	n, done, err = headers.Parse(data)
+	require.Error(t, err)
+	assert.Equal(t, "invalid header: empty key", err.Error())
+	assert.Equal(t, 0, n)
+	assert.False(t, done)
 }
